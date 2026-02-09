@@ -1,5 +1,5 @@
 # HU-Stage-2026
-Een repo die word bijgehouden durende de stage op de HU in2026
+Een repo die wordt bijgehouden tijdens de stage op de HU in 2026
 
 ## Documentation
 

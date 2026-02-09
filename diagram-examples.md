@@ -119,5 +119,5 @@ sequenceDiagram
 - Use `---` for non-directional connections
 - Use square brackets `[]` for rectangular nodes
 - Use parentheses `()` for rounded nodes
-- Use cylinder notation `[()]` for databases
+- Use cylinder notation `[(Database)]` for databases
 - Add colors with `style NodeName fill:#color`
