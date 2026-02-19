@@ -1,0 +1,21 @@
+# PlatformIO
+.pio/
+
+# VS Code
+.vscode/
+
+# Build outputs
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
