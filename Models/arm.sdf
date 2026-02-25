@@ -1,0 +1,503 @@
+
+
+<sdf version="1.6">
+<model name="robot" canonical_link='base_footprint'>
+  <static>false</static>
+  <pose relative_to='world'>0 0 0 0 0 0</pose>
+  <link name="base_footprint"></link>
+  <link name="base_link">
+    <pose relative_to='base_footprint'>0 0 0.35 0 0 0</pose>
+    <visual name='base_link visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>1.7 0.6 0.7</size>
+        </box>
+      </geometry>
+      <material>
+         <ambient>0.08650046202808521 0.29613827078752575 0.508881320845802 1</ambient>
+         <diffuse>0.08650046202808521 0.29613827078752575 0.508881320845802 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='base_link collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>1.7 0.6 0.7</size>
+        </box>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.16666666666666666</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.16666666666666666</iyy>
+        <iyz>0</iyz>
+        <izz>0.16666666666666666</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="base_footprint_to_base_link" type="fixed">
+    <pose relative_to='base_link'>0 0 0 0 0 0 </pose>
+    <parent>base_footprint</parent>
+    <child>base_link</child>
+  </joint>
+  <link name="servo1">
+    <pose relative_to='base_link'>-0.600370156138188 0.2 0.1 1.5707963267948963 0 0</pose>
+    <visual name='servo1 visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.1</radius>
+          <length>0.5</length>
+        </cylinder>
+      </geometry>
+      <material>
+         <ambient>0.2788942634659966 0.7991027380100881 0.04666508633021928 1</ambient>
+         <diffuse>0.2788942634659966 0.7991027380100881 0.04666508633021928 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='servo1 collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.1</radius>
+          <length>0.5</length>
+        </cylinder>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.3333333333333333</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.5</iyy>
+        <iyz>0</iyz>
+        <izz>0.3333333333333333</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="base_link_to_servo1" type="revolute">
+    <pose relative_to='servo1'>0 0 0 0 0 0 </pose>
+    <parent>base_link</parent>
+    <child>servo1</child>
+    <axis>
+        <xyz expressed_in='servo1'>0 0 1</xyz>
+        <limit>            <lower>-1</lower>            <upper>1</upper>        </limit>
+    </axis>
+  </joint>
+  <link name="servo2">
+    <pose relative_to='servo1'>0 -6.938893903907228e-18 -0.3990655049684929 -1.5707963267948963 0 0</pose>
+    <visual name='servo2 visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.1</radius>
+          <length>0.5</length>
+        </cylinder>
+      </geometry>
+      <material>
+         <ambient>0.6375968739867731 0.9734452903978066 0.6724431569510133 1</ambient>
+         <diffuse>0.6375968739867731 0.9734452903978066 0.6724431569510133 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='servo2 collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.1</radius>
+          <length>0.5</length>
+        </cylinder>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.3333333333333333</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.5</iyy>
+        <iyz>0</iyz>
+        <izz>0.3333333333333333</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="servo1_to_servo2" type="revolute">
+    <pose relative_to='servo2'>0 0 0 0 0 0 </pose>
+    <parent>servo1</parent>
+    <child>servo2</child>
+    <axis>
+        <xyz expressed_in='servo2'>0 0 1</xyz>
+        <limit>            <lower>-1</lower>            <upper>1</upper>        </limit>
+    </axis>
+  </joint>
+  <link name="link1">
+    <pose relative_to='servo2'>1 0 0.004902921815183203 0 0 0</pose>
+    <visual name='link1 visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>1.4 0.3 0.3</size>
+        </box>
+      </geometry>
+      <material>
+         <ambient>0.011612245176281512 0.16513219449147767 0.6866853124288864 1</ambient>
+         <diffuse>0.011612245176281512 0.16513219449147767 0.6866853124288864 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='link1 collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>1.4 0.3 0.3</size>
+        </box>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.16666666666666666</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.16666666666666666</iyy>
+        <iyz>0</iyz>
+        <izz>0.16666666666666666</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="servo2_to_link1" type="fixed">
+    <pose relative_to='link1'>0 0 0 0 0 0 </pose>
+    <parent>servo2</parent>
+    <child>link1</child>
+  </joint>
+  <link name="link1_inner">
+    <pose relative_to='link1'>0 0 0 0 1.5707963267948966 0</pose>
+    <visual name='link1_inner visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.25 0.25 1.8</size>
+        </box>
+      </geometry>
+      <material>
+         <ambient>0.12213877222015301 0.3515325994898463 0.8227857543924378 1</ambient>
+         <diffuse>0.12213877222015301 0.3515325994898463 0.8227857543924378 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='link1_inner collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.25 0.25 1.8</size>
+        </box>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.16666666666666666</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.16666666666666666</iyy>
+        <iyz>0</iyz>
+        <izz>0.16666666666666666</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="link1_to_link1_inner" type="prismatic">
+    <pose relative_to='link1_inner'>0 0 0 0 0 0 </pose>
+    <parent>link1</parent>
+    <child>link1_inner</child>
+    <axis>
+        <xyz expressed_in='link1_inner'>0 0 1</xyz>
+    </axis>
+  </joint>
+  <link name="EndLink1">
+    <pose relative_to='link1_inner'>-2.220446049250313e-16 0 1.052316053538345 0 -1.5707963267948966 0</pose>
+    <visual name='EndLink1 visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.3 0.3 0.35</size>
+        </box>
+      </geometry>
+      <material>
+         <ambient>0.02028856305209031 0.08650046202808521 0.36130677977297226 1</ambient>
+         <diffuse>0.02028856305209031 0.08650046202808521 0.36130677977297226 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='EndLink1 collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.3 0.3 0.35</size>
+        </box>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.16666666666666666</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.16666666666666666</iyy>
+        <iyz>0</iyz>
+        <izz>0.16666666666666666</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="link1_inner_to_EndLink1" type="fixed">
+    <pose relative_to='EndLink1'>0 0 0 0 0 0 </pose>
+    <parent>link1_inner</parent>
+    <child>EndLink1</child>
+  </joint>
+  <link name="servo3">
+    <pose relative_to='EndLink1'>0 0 0.275 1.5707963267948963 0 0</pose>
+    <visual name='servo3 visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.1</radius>
+          <length>0.5</length>
+        </cylinder>
+      </geometry>
+      <material>
+         <ambient>0.13286832154414627 0.20507873637973145 0.0033465357620980074 1</ambient>
+         <diffuse>0.13286832154414627 0.20507873637973145 0.0033465357620980074 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='servo3 collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.1</radius>
+          <length>0.5</length>
+        </cylinder>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.3333333333333333</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.5</iyy>
+        <iyz>0</iyz>
+        <izz>0.3333333333333333</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="EndLink1_to_servo3" type="revolute">
+    <pose relative_to='servo3'>0 0 0 0 0 0 </pose>
+    <parent>EndLink1</parent>
+    <child>servo3</child>
+    <axis>
+        <xyz expressed_in='servo3'>0 0 1</xyz>
+        <limit>            <lower>-1</lower>            <upper>1</upper>        </limit>
+    </axis>
+  </joint>
+  <link name="link2">
+    <pose relative_to='servo3'>0 0.9 0 -1.5707963267948963 0 0</pose>
+    <visual name='link2 visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.3 0.3 1.6</size>
+        </box>
+      </geometry>
+      <material>
+         <ambient>0.011612245176281512 0.16513219449147767 0.6866853124288864 1</ambient>
+         <diffuse>0.011612245176281512 0.16513219449147767 0.6866853124288864 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='link2 collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.3 0.3 1.6</size>
+        </box>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.16666666666666666</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.16666666666666666</iyy>
+        <iyz>0</iyz>
+        <izz>0.16666666666666666</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="servo3_to_link2" type="fixed">
+    <pose relative_to='link2'>0 0 0 0 0 0 </pose>
+    <parent>servo3</parent>
+    <child>link2</child>
+  </joint>
+  <link name="link2_inner">
+    <pose relative_to='link2'>0 0 0.45 0 0 0</pose>
+    <visual name='link2_inner visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.25 0.25 1</size>
+        </box>
+      </geometry>
+      <material>
+         <ambient>0.12213877222015301 0.3515325994898463 0.8227857543924378 1</ambient>
+         <diffuse>0.12213877222015301 0.3515325994898463 0.8227857543924378 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='link2_inner collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.25 0.25 1</size>
+        </box>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.16666666666666666</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.16666666666666666</iyy>
+        <iyz>0</iyz>
+        <izz>0.16666666666666666</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="link2_to_link2_inner" type="prismatic">
+    <pose relative_to='link2_inner'>0 0 0 0 0 0 </pose>
+    <parent>link2</parent>
+    <child>link2_inner</child>
+    <axis>
+        <xyz expressed_in='link2_inner'>0 0 1</xyz>
+    </axis>
+  </joint>
+  <link name="servo4">
+    <pose relative_to='link2_inner'>0 0 0.6 1.5707963267948963 0 0</pose>
+    <visual name='servo4 visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.1</radius>
+          <length>0.5</length>
+        </cylinder>
+      </geometry>
+      <material>
+         <ambient>0.6938717612856897 0.024157632443547246 0.0018211619011764706 1</ambient>
+         <diffuse>0.6938717612856897 0.024157632443547246 0.0018211619011764706 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='servo4 collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.1</radius>
+          <length>0.5</length>
+        </cylinder>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.3333333333333333</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.5</iyy>
+        <iyz>0</iyz>
+        <izz>0.3333333333333333</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="link2_inner_to_servo4" type="revolute">
+    <pose relative_to='servo4'>0 0 0 0 0 0 </pose>
+    <parent>link2_inner</parent>
+    <child>servo4</child>
+    <axis>
+        <xyz expressed_in='servo4'>0 0 1</xyz>
+        <limit>            <lower>-1</lower>            <upper>1</upper>        </limit>
+    </axis>
+  </joint>
+  <link name="writsplate">
+    <pose relative_to='servo4'>-0.15 0.14978240822898492 2.7755575615628914e-17 -1.5707963267948963 0 0</pose>
+    <visual name='writsplate visual'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.55 0.35 0.1</size>
+        </box>
+      </geometry>
+      <material>
+         <ambient>0.4286904966038916 0.6375968739867731 0.001214107934117647 1</ambient>
+         <diffuse>0.4286904966038916 0.6375968739867731 0.001214107934117647 1</diffuse>
+         <specular>0.1 0.1 0.1 1</specular>
+         <emissive>0 0 0 1</emissive>
+       </material>
+    </visual>
+    <collision name='writsplate collision'>
+      <pose>0 0 0 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.35 0.35 0.1</size>
+        </box>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass>1</mass>
+      <inertia>
+        <ixx>0.16666666666666666</ixx>
+        <ixy>0</ixy>
+        <ixz>0</ixz>
+        <iyy>0.16666666666666666</iyy>
+        <iyz>0</iyz>
+        <izz>0.16666666666666666</izz>
+      </inertia>
+    </inertial>
+  </link>
+  <joint name="servo4_to_writsplate" type="fixed">
+    <pose relative_to='writsplate'>0 0 0 0 0 0 </pose>
+    <parent>servo4</parent>
+    <child>writsplate</child>
+  </joint>
+    <plugin name="joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
+        <ros>
+            <remapping>~/out:=/joint_states</remapping>
+        </ros>
+        <update_rate>5</update_rate>
+       <joint_name>base_link_to_servo1</joint_name>
+       <joint_name>servo1_to_servo2</joint_name>
+       <joint_name>link1_to_link1_inner</joint_name>
+       <joint_name>EndLink1_to_servo3</joint_name>
+       <joint_name>link2_to_link2_inner</joint_name>
+       <joint_name>link2_inner_to_servo4</joint_name>
+    </plugin>
+</model>
+</sdf>
+

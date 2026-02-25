@@ -19,7 +19,7 @@ Test code schrijven:
 
 
 
-### week 1 - 16-02-2026 tm 20-02-2026
+### week 2 - 16-02-2026 tm 20-02-2026
 
 Bordje bestellen
 
@@ -29,6 +29,16 @@ Natuurlijke remote input concept:
 Inverse Kinematics example
 
 
+### week 3 - 23-02-2026 tm 27-02-2026
+
+Beter onderzoek naar Libraries.
+ - Bart Bozon mailen
+
+Betere Inverse Kinematics die modulaire is door middel van library.
+    - omhoog pointen, over zichzelf heen
 
 
+draagkracht limits navragen 
+ - Test reproduceerbaarheid
+ - anders mailen naar GoMotorWorld voor versie met Sensoren.
 

@@ -1,0 +1,45 @@
+// the uart used to control servos.
+// GPIO 18 - S_RXD, GPIO 19 - S_TXD, as default.
+#define S_RXD 9
+#define S_TXD 8
+#include <SCServo.h>
+
+SMS_STS sms_sts;
+
+void setup()
+{
+  Serial1.begin(1000000, SERIAL_8N1, S_RXD, S_TXD);
+  Serial.begin(115200);
+  sms_sts.pSerial = &Serial1;
+  delay(1000);
+}
+
+void loop()
+{
+  const int NUM_SERVOS = 4;
+  const int SERVO_IDS[NUM_SERVOS] = {1, 2, 3, 4};
+
+  for (int i = 0; i < NUM_SERVOS; i++) {
+    int id = SERVO_IDS[i];
+
+    if (sms_sts.FeedBack(id) != -1) {
+      int Pos     = sms_sts.ReadPos(-1);
+      int Speed   = sms_sts.ReadSpeed(-1);
+      int Load    = sms_sts.ReadLoad(-1);
+      int Voltage = sms_sts.ReadVoltage(-1);
+      int Temper  = sms_sts.ReadTemper(-1);
+      int Move    = sms_sts.ReadMove(-1);
+      int Current = sms_sts.ReadCurrent(-1);
+
+      Serial.printf("[Servo %d] Pos:%4d  Speed:%4d  Load:%4d  Volt:%4d  Temp:%3d  Move:%d  Cur:%4d\n",
+                    id, Pos, Speed, Load, Voltage, Temper, Move, Current);
+    } else {
+      Serial.printf("[Servo %d] FeedBack err\n", id);
+    }
+
+    delay(10);
+  }
+
+  Serial.println("----------------------------------------");
+  delay(500);
+}

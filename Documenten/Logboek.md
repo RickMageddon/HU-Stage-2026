@@ -22,5 +22,17 @@ Team meeting gehad in de ochtend en in de middag een meeting met Dennis over de 
 ### 17-02-2026 - Dag 7
 Hele dag aan PVA gezeten. verder niks
 
-### 17-02-2026 - Dag 8
+### 18-02-2026 - Dag 8
 Hele dag aan PVA gezeten. Daarna requirements gekregen van Dennis en onderdelen ontvangen en getetst
+
+### 19-02-2026 - Dag 9
+Gewerkt aan de besturing van de arm. Servo's werkend gekregen en uit kunnen lezen. ook een eerste variant van Inverse Kinematics aan de praat gekregen.
+
+### 20-02-2026 - Dag 10
+Heledag gewerkt aan inverse kinematis te onderzoeken en feedback gegeven op annabel
+
+### 23-02-2026 - Dag 11
+Heledag gewerkt aan inverse kinematics. Veel progressie gemaakt. Team meeting gehad en met Dennis nieuwe weekplanning gemaakt
+
+### 24-02-2026 - Dag 12
+Aan inverse kinematics gezeten, en een URDF gemaakt van de arm.
