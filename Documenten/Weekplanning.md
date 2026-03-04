@@ -42,3 +42,17 @@ draagkracht limits navragen
  - Test reproduceerbaarheid
  - anders mailen naar GoMotorWorld voor versie met Sensoren.
 
+
+### week 3 - 2-03-2026 tm 6-02-2026
+
+Coordinaten van de robotarm digitaal in kaart brengen:
+ - URDF variant mee laten bewegen met de echte arm
+
+School Documenten inleveren:
+ - team afspraken
+ - persoonlijke leerdoelen
+ - logboek
+ - startdocument
+ - Planning
+
+ Gomotorworld emailen

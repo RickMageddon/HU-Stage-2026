@@ -1,6 +1,7 @@
 
 
-<sdf version="1.6">
+<sdf version="1.8">
+<world name="arm_simulation">
 <model name="robot" canonical_link='base_footprint'>
   <static>false</static>
   <pose relative_to='world'>0 0 0 0 0 0</pose>
@@ -45,6 +46,10 @@
     <pose relative_to='base_link'>0 0 0 0 0 0 </pose>
     <parent>base_footprint</parent>
     <child>base_link</child>
+  </joint>
+  <joint name="base_footprint_fixed" type="fixed">
+    <parent>world</parent>
+    <child>base_footprint</child>
   </joint>
   <link name="servo1">
     <pose relative_to='base_link'>-0.600370156138188 0.2 0.1 1.5707963267948963 0 0</pose>
@@ -486,18 +491,52 @@
     <parent>servo4</parent>
     <child>writsplate</child>
   </joint>
-    <plugin name="joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
-        <ros>
-            <remapping>~/out:=/joint_states</remapping>
-        </ros>
-        <update_rate>5</update_rate>
-       <joint_name>base_link_to_servo1</joint_name>
-       <joint_name>servo1_to_servo2</joint_name>
-       <joint_name>link1_to_link1_inner</joint_name>
-       <joint_name>EndLink1_to_servo3</joint_name>
-       <joint_name>link2_to_link2_inner</joint_name>
-       <joint_name>link2_inner_to_servo4</joint_name>
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <update_rate>50</update_rate>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <joint_name>base_link_to_servo1</joint_name>
+      <topic>servo1_cmd</topic>
+      <p_gain>10</p_gain>
+      <i_gain>0.1</i_gain>
+      <d_gain>0.5</d_gain>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <joint_name>servo1_to_servo2</joint_name>
+      <topic>servo2_cmd</topic>
+      <p_gain>10</p_gain>
+      <i_gain>0.1</i_gain>
+      <d_gain>0.5</d_gain>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <joint_name>EndLink1_to_servo3</joint_name>
+      <topic>servo3_cmd</topic>
+      <p_gain>10</p_gain>
+      <i_gain>0.1</i_gain>
+      <d_gain>0.5</d_gain>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <joint_name>link2_inner_to_servo4</joint_name>
+      <topic>servo4_cmd</topic>
+      <p_gain>10</p_gain>
+      <i_gain>0.1</i_gain>
+      <d_gain>0.5</d_gain>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <joint_name>link1_to_link1_inner</joint_name>
+      <topic>prismatic1_cmd</topic>
+      <p_gain>10</p_gain>
+      <i_gain>0.1</i_gain>
+      <d_gain>0.5</d_gain>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <joint_name>link2_to_link2_inner</joint_name>
+      <topic>prismatic2_cmd</topic>
+      <p_gain>10</p_gain>
+      <i_gain>0.1</i_gain>
+      <d_gain>0.5</d_gain>
     </plugin>
 </model>
+</world>
 </sdf>
 
