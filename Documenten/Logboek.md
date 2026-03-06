@@ -50,4 +50,10 @@ Terugkomdag op de HU, ochtend en deel middag daar mee bezig geweest. Later op de
 In de ochtend teammeeting gehad en in de middag weer wat softwares geinstalleerd op mijn laptop. eerder weggegaan om mijn pas op te halen
 
 ### 03-03-2026 dag 17
-In de ochtend gewerkt aan weer gazebo en ros2 container werkend te krijgen, en dat omgezet naar docker. in de middag bezig geweest met een digital twin en visualizer te maken.
+In de ochtend gewerkt aan weer gazebo en ros2 container werkend te krijgen, en dat omgezet naar docker. in de middag bezig geweest met een digital twin en visualizer te maken.'
+
+### 04-02-2026 dag 18
+De Vizualiser werkend gekregen met correcte output met de arm, nu kan het debuggen beginnen. Verder gesprek gehad met Sandor en ik moet mijn PVA aanpassen. 
+
+### 05-02-2026 dag 19
+extern gewerkt, een URDF tester/creator gemaatk voor debugging

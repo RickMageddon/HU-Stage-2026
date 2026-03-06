@@ -57,12 +57,10 @@ JOINT_SIGN = {1: -1.0, 2: 1.0, 3: 1.0, 4: -1.0}
 JOINT_OFFSET_DEG = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
 
 # Scale: firmware works in mm, URDF in its own units.
-# URDF Link1 box = 1.55 units = 180 mm  →  1 unit ≈ 116 mm
-# URDF Link2 box = 1.85 units = 210 mm  →  1 unit ≈ 113 mm
+# URDF Link1 box = 1.55 units = 180 mm, Link2 = 1.85 units = 210 mm
 MM_TO_URDF = 1.0 / 115.0  # average scale factor
 
 # Approximate shoulder joint origin in URDF world coordinates
-# (base_link at Z=0.5, servo1 joint at ~X=0.6 from base center)
 URDF_SHOULDER_ORIGIN = (0.6, 0.0, 0.5)
 
 
@@ -89,13 +87,25 @@ class ArmVisualizer:
         # Last goto target coordinates (mm)
         self.target_coords = None   # (x, y, z) or None
 
+        # Actual servo angles (from feedback)
+        self.act_angles = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0}
+
         # PyBullet handles
         self.physics_client = None
         self.robot = None
         self.joint_indices = {}
 
-        # Status text overlay
+        # Goto marker (green sphere at goto target)
+        self.goto_marker_id = None
+        self.goto_label_id = None
+
+        # Status text overlays (multiple lines)
         self.status_text_id = None
+        self.status_text_id2 = None
+        self.status_text_id3 = None
+
+        # End-effector link name (last link in the URDF chain)
+        self.ee_link_name = 'mountingplate'
 
     # ── Serial port helpers ────────────────────────────────────────
 
@@ -180,23 +190,70 @@ class ArmVisualizer:
         # Build joint index map
         self.joint_indices = self._get_joint_indices(self.robot)
 
-        # Label
-        p.addUserDebugText(
-            "Digital Twin",
-            [0, 0, 2.5],
-            textColorRGB=[1.0, 1.0, 1.0],
-            textSize=1.5
-        )
-
         # Target marker (hidden until user places one)
         self.target_marker_id = None
         self.target_label_id = None
 
-        # Goto marker (shows where the goto coordinate is in 3D space)
-        self.goto_marker_id = None
-        self.goto_label_id = None
-
         print("  PyBullet visualization ready.")
+
+    # ── Camera-following HUD ────────────────────────────────────────
+
+    def _get_hud_positions(self, num_lines=3):
+        """Compute world-space positions that project to the top-left
+        corner of the current camera view, so the text acts as a HUD."""
+        cam = p.getDebugVisualizerCamera()
+        yaw_deg  = cam[8]
+        pitch_deg = cam[9]
+        dist     = cam[10]
+        target   = cam[11]
+
+        yaw   = math.radians(yaw_deg)
+        pitch = math.radians(pitch_deg)
+
+        # Camera position in world
+        cx = target[0] + dist * math.cos(pitch) * math.sin(yaw)
+        cy = target[1] - dist * math.cos(pitch) * math.cos(yaw)
+        cz = target[2] - dist * math.sin(pitch)
+
+        # Forward (camera → target), normalized
+        fwd = [target[0] - cx, target[1] - cy, target[2] - cz]
+        fl = math.sqrt(sum(f * f for f in fwd))
+        if fl < 1e-9:
+            return [[0, 0, 5]] * num_lines
+        fwd = [f / fl for f in fwd]
+
+        # Right = fwd × world_up  (horizontal)
+        right = [fwd[1], -fwd[0], 0.0]
+        rl = math.sqrt(right[0] ** 2 + right[1] ** 2)
+        if rl < 1e-9:
+            right = [1.0, 0.0, 0.0]
+        else:
+            right = [right[0] / rl, right[1] / rl, 0.0]
+
+        # Camera up = right × fwd
+        up = [
+            right[1] * fwd[2] - right[2] * fwd[1],
+            right[2] * fwd[0] - right[0] * fwd[2],
+            right[0] * fwd[1] - right[1] * fwd[0],
+        ]
+
+        # Place text on a plane 30 % of the way from camera to target,
+        # offset to the top-left quadrant of the viewport.
+        plane_d    = dist * 0.30
+        half_ext   = plane_d * 0.70          # approx visible half-extent
+        h_off      = -half_ext * 0.95        # far left
+        v_base     =  half_ext * 0.80        # top
+        line_gap   =  half_ext * 0.14        # spacing between lines
+
+        positions = []
+        for row in range(num_lines):
+            v_off = v_base - row * line_gap
+            positions.append([
+                cx + fwd[0] * plane_d + right[0] * h_off + up[0] * v_off,
+                cy + fwd[1] * plane_d + right[1] * h_off + up[1] * v_off,
+                cz + fwd[2] * plane_d + right[2] * h_off + up[2] * v_off,
+            ])
+        return positions
 
     # ── Grid and axes ──────────────────────────────────────────────
 
@@ -282,23 +339,18 @@ class ArmVisualizer:
         print(f"  Target marker placed at ({x}, {y}, {z})")
 
     def place_goto_marker(self, x_mm, y_mm, z_mm):
-        """Place a small sphere at the goto target, converting mm to URDF coords.
-        Firmware: X=forward, Y=sideways, Z=up.
-        URDF world: X=forward, Y=left, Z=up (same orientation).
-        Origin = shoulder joint position in URDF world.
-        """
+        """Place a green sphere at the goto target, converting mm to URDF coords."""
         ox, oy, oz = URDF_SHOULDER_ORIGIN
         ux = ox + x_mm * MM_TO_URDF
         uy = oy + y_mm * MM_TO_URDF
         uz = oz + z_mm * MM_TO_URDF
 
-        # Remove previous goto marker
+        # Remove previous
         if self.goto_marker_id is not None:
             p.removeBody(self.goto_marker_id)
         if self.goto_label_id is not None:
             p.removeUserDebugItem(self.goto_label_id)
 
-        # Small green sphere
         vs = p.createVisualShape(p.GEOM_SPHERE, radius=0.08,
                                   rgbaColor=[0.2, 1.0, 0.2, 0.85])
         self.goto_marker_id = p.createMultiBody(
@@ -310,7 +362,7 @@ class ArmVisualizer:
             textColorRGB=[0.2, 1.0, 0.2], textSize=1.0)
 
     def remove_goto_marker(self):
-        """Remove the goto marker (e.g. on 'home')."""
+        """Remove the goto marker."""
         if self.goto_marker_id is not None:
             p.removeBody(self.goto_marker_id)
             self.goto_marker_id = None
@@ -354,7 +406,6 @@ class ArmVisualizer:
         """
         Parse a #VIS line from the firmware.
         Format: #VIS,cmd_s1,cmd_s2,cmd_s3,cmd_s4,act_s1,act_s2,act_s3,act_s4
-        We only use the commanded angles (first 4) for the digital twin.
         """
         if not line.startswith('#VIS,'):
             return False
@@ -367,6 +418,11 @@ class ArmVisualizer:
                 self.cmd_angles[2] = float(parts[1])
                 self.cmd_angles[3] = float(parts[2])
                 self.cmd_angles[4] = float(parts[3])
+                if len(parts) >= 8:
+                    self.act_angles[1] = float(parts[4])
+                    self.act_angles[2] = float(parts[5])
+                    self.act_angles[3] = float(parts[6])
+                    self.act_angles[4] = float(parts[7])
             return True
         except (ValueError, IndexError):
             return False
@@ -468,37 +524,86 @@ class ArmVisualizer:
 
     # ── Status overlay ─────────────────────────────────────────────
 
+    def _get_ee_position_mm(self):
+        """Get end-effector position in mm using PyBullet FK."""
+        # Find the mounting plate link index
+        for i in range(p.getNumJoints(self.robot)):
+            info = p.getJointInfo(self.robot, i)
+            if info[12].decode('utf-8') == self.ee_link_name:
+                state = p.getLinkState(self.robot, i)
+                pos = state[0]  # world position in URDF units
+                ox, oy, oz = URDF_SHOULDER_ORIGIN
+                # Convert from URDF coords back to mm (relative to shoulder)
+                x_mm = (pos[0] - ox) / MM_TO_URDF
+                y_mm = (pos[1] - oy) / MM_TO_URDF
+                z_mm = (pos[2] - oz) / MM_TO_URDF
+                return (x_mm, y_mm, z_mm)
+        return (0.0, 0.0, 0.0)
+
     def update_status_text(self):
-        """Show current angles as on-screen text in PyBullet."""
+        """Show rich info as on-screen text in PyBullet."""
         with self.lock:
             ca = self.cmd_angles.copy()
+            aa = self.act_angles.copy()
+            tgt = self.target_coords
 
-        coord_str = ""
-        if self.target_coords is not None:
-            cx, cy, cz = self.target_coords
-            coord_str = f"  |  Target: X={cx:.0f}  Y={cy:.0f}  Z={cz:.0f} mm"
+        ee = self._get_ee_position_mm()
 
-        text = (
-            f"S1:{ca[1]:6.1f}  S2:{ca[2]:6.1f}"
-            f"  S3:{ca[3]:6.1f}  S4:{ca[4]:6.1f}"
-            + coord_str
+        # Line 1: Commanded angles
+        line1 = (
+            f"Cmd   S1:{ca[1]:6.1f}\u00b0  S2:{ca[2]:6.1f}\u00b0"
+            f"  S3:{ca[3]:6.1f}\u00b0  S4:{ca[4]:6.1f}\u00b0"
         )
+        # Line 2: Actual angles + end-effector position
+        line2 = (
+            f"Act   S1:{aa[1]:6.1f}\u00b0  S2:{aa[2]:6.1f}\u00b0"
+            f"  S3:{aa[3]:6.1f}\u00b0  S4:{aa[4]:6.1f}\u00b0"
+            f"      EE: ({ee[0]:.0f}, {ee[1]:.0f}, {ee[2]:.0f}) mm"
+        )
+        # Line 3: Target + distance
+        if tgt is not None:
+            dx = ee[0] - tgt[0]
+            dy = ee[1] - tgt[1]
+            dz = ee[2] - tgt[2]
+            dist = math.sqrt(dx*dx + dy*dy + dz*dz)
+            line3 = (
+                f"Target: ({tgt[0]:.0f}, {tgt[1]:.0f}, {tgt[2]:.0f}) mm"
+                f"    Distance: {dist:.1f} mm"
+            )
+        else:
+            line3 = "Target: none"
+
+        purple = [0.7, 0.2, 1.0]
+        blue   = [0.5, 0.5, 1.0]
+        green  = [0.2, 1.0, 0.2]
+        hud = self._get_hud_positions(3)
+        pos1 = hud[0]
+        pos2 = hud[1]
+        pos3 = hud[2]
 
         if self.status_text_id is not None:
             self.status_text_id = p.addUserDebugText(
-                text,
-                [0, -2, 0.1],
-                textColorRGB=[0.7, 0.2, 1.0],
-                textSize=1.2,
-                replaceItemUniqueId=self.status_text_id
-            )
+                line1, pos1, textColorRGB=purple, textSize=1.2,
+                replaceItemUniqueId=self.status_text_id)
         else:
             self.status_text_id = p.addUserDebugText(
-                text,
-                [0, -2, 0.1],
-                textColorRGB=[0.7, 0.2, 1.0],
-                textSize=1.2
-            )
+                line1, pos1, textColorRGB=purple, textSize=1.2)
+
+        if self.status_text_id2 is not None:
+            self.status_text_id2 = p.addUserDebugText(
+                line2, pos2, textColorRGB=blue, textSize=1.0,
+                replaceItemUniqueId=self.status_text_id2)
+        else:
+            self.status_text_id2 = p.addUserDebugText(
+                line2, pos2, textColorRGB=blue, textSize=1.0)
+
+        if self.status_text_id3 is not None:
+            self.status_text_id3 = p.addUserDebugText(
+                line3, pos3, textColorRGB=green, textSize=1.0,
+                replaceItemUniqueId=self.status_text_id3)
+        else:
+            self.status_text_id3 = p.addUserDebugText(
+                line3, pos3, textColorRGB=green, textSize=1.0)
 
     # ── Main loop ──────────────────────────────────────────────────
 
@@ -531,8 +636,6 @@ class ArmVisualizer:
         print("  Close the 3D window or press Ctrl-C to exit.\n")
 
         frame_dt = 1.0 / 60.0
-        status_interval = 0.25   # seconds between status overlay updates
-        last_status = 0.0
 
         try:
             while self.running:
@@ -541,8 +644,6 @@ class ArmVisualizer:
                     p.getConnectionInfo(self.physics_client)
                 except Exception:
                     break
-
-                now = time.time()
 
                 # Slider fallback (no serial)
                 if not has_serial:
@@ -573,10 +674,8 @@ class ArmVisualizer:
                 self.update_robot(self.robot,
                                   self.joint_indices, self.display_angles)
 
-                # Status text overlay
-                if now - last_status > status_interval:
-                    self.update_status_text()
-                    last_status = now
+                # Status text HUD (update every frame to follow camera)
+                self.update_status_text()
 
                 p.stepSimulation()
                 time.sleep(frame_dt)

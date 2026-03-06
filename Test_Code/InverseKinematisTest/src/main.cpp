@@ -5,13 +5,7 @@
 
 // =====================================================================
 //  INVERSE KINEMATICS + SERVO CONTROL
-//  2-link arm in vertical plane with base rotation (Waveshare ST3235)
-//
-//  URDF joint mapping:
-//    Servo 1 = Shoulder pitch  (rotates about -Y, vertical plane)
-//    Servo 2 = Base rotation   (rotates about  Z, horizontal yaw)
-//    Servo 3 = Elbow pitch     (rotates about -Y, vertical plane)
-//    Servo 4 = Wrist
+//  2-link planar arm with base rotation (Waveshare ST3235 servos)
 // =====================================================================
 
 // --- SCServo Communication ---
@@ -20,7 +14,7 @@ SMS_STS st;
 #define S_TXD 8
 
 // --- Servo Configuration (Waveshare ST3235: 0-4095 = 0-360°) ---
-// Servo IDs: 1=Shoulder, 2=Base rotation, 3=Elbow, 4=Wrist
+// Servo IDs: 1=Base rotation, 2=Shoulder, 3=Elbow, 4=Wrist
 const int NUM_SERVOS   = 4;
 const int SERVO_MIN[]  = {250,  820,  735,   1};
 const int SERVO_MAX[]  = {2200, 2200, 2500, 2500};
@@ -41,9 +35,6 @@ Fabrik2D fabrik(NUM_JOINTS, linkLengths, 0.5);
 // Full range: 0-4095 counts = 0°-360°
 const float COUNTS_PER_DEG = 4095.0 / 360.0;  // ~11.375
 
-// --- Debug: force move past unreachable targets ---
-bool forceMove = false;
-
 // =====================================================================
 //  SERVO CALIBRATION
 //
@@ -56,20 +47,21 @@ bool forceMove = false;
 //    1. Use 'servo <id> <pos>' to manually move joints
 //    2. Measure the physical angle at known servo positions
 //    3. Adjust homeAngleDeg and direction below
-//    4. Test with 'goto <x> <y> <z>' and refine
+//    4. Test with 'goto <x> <y>' and refine
 // =====================================================================
 
-// Servo 1 - Shoulder (vertical plane pitch)
-//   Home (400): arm extending flat forward = 0° from horizontal
-const float SHOULDER_HOME_DEG = 0.0;
-const int   SHOULDER_DIR      = 1;
-
-// Servo 2 - Base rotation (horizontal yaw)
-//   Home (1950): arm facing forward = 0° rotation
+// Servo 1 - Base rotation (rotates the whole flat arm)
+//   Home (400): arm facing forward = 0° rotation
 const float BASE_HOME_DEG     = 0.0;
-const int   BASE_DIR          = -1;
+const int   BASE_DIR          = 1;
 
-// Servo 3 - Elbow (vertical plane pitch)
+// Servo 2 - Shoulder (horizontal plane, first IK joint)
+//   Home (1950): arm extending flat forward = 0° from forward axis
+//   (Arm is mounted sideways, so it operates in the horizontal plane)
+const float SHOULDER_HOME_DEG = 0.0;
+const int   SHOULDER_DIR      = -1;
+
+// Servo 3 - Elbow (horizontal plane, second IK joint)
 //   Home (735): straight continuation of upper arm = 0° relative angle
 const float ELBOW_HOME_DEG    = 0.0;
 const int   ELBOW_DIR         = 1;
@@ -79,14 +71,13 @@ const float WRIST_HOME_DEG    = 0.0;
 const int   WRIST_DIR         = 1;
 
 // --- Visualization Data (sent to PC for URDF viewer) ---
-float cmdShoulderDeg = 0, cmdBaseDeg = 0, cmdElbowDeg = 0, cmdWristDeg = 0;
+float cmdBaseDeg = 0, cmdShoulderDeg = 0, cmdElbowDeg = 0, cmdWristDeg = 0;
 unsigned long lastVisSend = 0;
 const unsigned long VIS_INTERVAL = 250; // ms between VIS updates
 
 // =====================================================================
 //  HELPER FUNCTIONS
 // =====================================================================
-
 
 float radToDeg(float rad) {
   return rad * 180.0 / M_PI;
@@ -135,8 +126,8 @@ void moveServo(int id, int pos) {
   st.WritePosEx(id, pos, SERVO_SPEED, SERVO_ACC);
   // Track commanded angle for visualization
   switch(id) {
-    case 1: cmdShoulderDeg = servoToAngle(pos, SHOULDER_HOME_DEG, SERVO_HOME[0], SHOULDER_DIR); break;
-    case 2: cmdBaseDeg     = servoToAngle(pos, BASE_HOME_DEG,     SERVO_HOME[1], BASE_DIR);     break;
+    case 1: cmdBaseDeg     = servoToAngle(pos, BASE_HOME_DEG,     SERVO_HOME[0], BASE_DIR);     break;
+    case 2: cmdShoulderDeg = servoToAngle(pos, SHOULDER_HOME_DEG, SERVO_HOME[1], SHOULDER_DIR); break;
     case 3: cmdElbowDeg    = servoToAngle(pos, ELBOW_HOME_DEG,    SERVO_HOME[2], ELBOW_DIR);    break;
     case 4: cmdWristDeg    = servoToAngle(pos, WRIST_HOME_DEG,    SERVO_HOME[3], WRIST_DIR);    break;
   }
@@ -152,8 +143,8 @@ void moveHome() {
   for (int i = 0; i < NUM_SERVOS; i++) {
     st.WritePosEx(i + 1, SERVO_HOME[i], SERVO_SPEED, SERVO_ACC);
   }
-  cmdShoulderDeg = SHOULDER_HOME_DEG;
   cmdBaseDeg = BASE_HOME_DEG;
+  cmdShoulderDeg = SHOULDER_HOME_DEG;
   cmdElbowDeg = ELBOW_HOME_DEG;
   cmdWristDeg = WRIST_HOME_DEG;
 }
@@ -171,22 +162,22 @@ void readPositions() {
 
 /**
  * Send visualization data over serial for the PC-side URDF viewer.
- * Format: #VIS,cmd_shoulder,cmd_base,cmd_elbow,cmd_wrist,act_shoulder,act_base,act_elbow,act_wrist
+ * Format: #VIS,cmd_base,cmd_shoulder,cmd_elbow,cmd_wrist,act_base,act_shoulder,act_elbow,act_wrist
  * All values in degrees.
  */
 void sendVisualizationData() {
-  float actShoulder = servoToAngle(st.ReadPos(1), SHOULDER_HOME_DEG, SERVO_HOME[0], SHOULDER_DIR);
-  float actBase     = servoToAngle(st.ReadPos(2), BASE_HOME_DEG,     SERVO_HOME[1], BASE_DIR);
+  float actBase     = servoToAngle(st.ReadPos(1), BASE_HOME_DEG,     SERVO_HOME[0], BASE_DIR);
+  float actShoulder = servoToAngle(st.ReadPos(2), SHOULDER_HOME_DEG, SERVO_HOME[1], SHOULDER_DIR);
   float actElbow    = servoToAngle(st.ReadPos(3), ELBOW_HOME_DEG,    SERVO_HOME[2], ELBOW_DIR);
   float actWrist    = servoToAngle(st.ReadPos(4), WRIST_HOME_DEG,    SERVO_HOME[3], WRIST_DIR);
 
   Serial.print("#VIS,");
-  Serial.print(cmdShoulderDeg, 2); Serial.print(",");
   Serial.print(cmdBaseDeg, 2);     Serial.print(",");
+  Serial.print(cmdShoulderDeg, 2); Serial.print(",");
   Serial.print(cmdElbowDeg, 2);    Serial.print(",");
   Serial.print(cmdWristDeg, 2);    Serial.print(",");
-  Serial.print(actShoulder, 2);    Serial.print(",");
   Serial.print(actBase, 2);        Serial.print(",");
+  Serial.print(actShoulder, 2);    Serial.print(",");
   Serial.print(actElbow, 2);       Serial.print(",");
   Serial.println(actWrist, 2);
 }
@@ -195,15 +186,16 @@ void sendVisualizationData() {
 //  INVERSE KINEMATICS
 // =====================================================================
 
-
 /**
- * Move the arm to a 2D target in the vertical plane.
+ * Move the arm to a 2D target in the horizontal plane.
  *   x = forward distance from base (mm)
- *   y = vertical height from base (mm)
+ *   y = sideways distance from base (mm)
  *
- * Solves 2-link IK in the vertical plane (forward, up).
- * Moves Servo 1 (shoulder) and Servo 3 (elbow).
- * Base rotation (Servo 2) is unchanged.
+ * The arm is mounted flat (sideways), so shoulder and elbow
+ * move in the horizontal plane.
+ *
+ * Only moves Servo 2 (shoulder) and Servo 3 (elbow).
+ * Base rotation (Servo 1) is unchanged.
  */
 bool moveToXY(float x, float y) {
   uint8_t result = fabrik.solve(x, y, linkLengths);
@@ -212,8 +204,7 @@ bool moveToXY(float x, float y) {
     Serial.println("IK failed: target unreachable!");
     Serial.print("  Max reach: "); Serial.print(LINK1 + LINK2); Serial.println(" mm");
     Serial.print("  Target dist: "); Serial.print(sqrt(x * x + y * y)); Serial.println(" mm");
-    if (!forceMove) return false;
-    Serial.println("  [FORCE] Overriding — moving to closest reachable point");
+    return false;
   }
 
   // FABRIK angles: joint 0 = absolute angle of first link from +X axis
@@ -221,10 +212,10 @@ bool moveToXY(float x, float y) {
   float shoulderDeg = radToDeg(fabrik.getAngle(0));
   float elbowDeg    = radToDeg(fabrik.getAngle(1));
 
-  // Map to servo positions (Servo 1 = shoulder, Servo 3 = elbow)
+  // Map to servo positions
   int shoulderPos = angleToServo(shoulderDeg, SHOULDER_HOME_DEG,
-                                 SERVO_HOME[0], SHOULDER_DIR,
-                                 SERVO_MIN[0], SERVO_MAX[0]);
+                                 SERVO_HOME[1], SHOULDER_DIR,
+                                 SERVO_MIN[1], SERVO_MAX[1]);
   int elbowPos    = angleToServo(elbowDeg, ELBOW_HOME_DEG,
                                  SERVO_HOME[2], ELBOW_DIR,
                                  SERVO_MIN[2], SERVO_MAX[2]);
@@ -235,8 +226,8 @@ bool moveToXY(float x, float y) {
   Serial.print(", ");        Serial.print(y); Serial.println(") mm");
   Serial.print("Shoulder angle: "); Serial.print(shoulderDeg); Serial.println(" deg");
   Serial.print("Elbow angle:    "); Serial.print(elbowDeg);    Serial.println(" deg");
-  Serial.print("Shoulder servo(1): "); Serial.println(shoulderPos);
-  Serial.print("Elbow servo(3):    "); Serial.println(elbowPos);
+  Serial.print("Shoulder servo: "); Serial.println(shoulderPos);
+  Serial.print("Elbow servo:    "); Serial.println(elbowPos);
 
   // Print solved joint positions
   for (int i = 0; i < NUM_JOINTS; i++) {
@@ -247,7 +238,7 @@ bool moveToXY(float x, float y) {
   Serial.println("--------------------");
 
   // Move servos
-  moveServo(1, shoulderPos);
+  moveServo(2, shoulderPos);
   moveServo(3, elbowPos);
 
   return true;
@@ -257,41 +248,42 @@ bool moveToXY(float x, float y) {
  * Move the arm to a 3D target position.
  *   x = forward distance from base (mm)
  *   y = sideways distance from base (mm)
- *   z = vertical height from base (mm)
+ *   z = vertical height from base (mm) — ignored by flat arm,
+ *       but base rotation adjusts to point toward (x, y)
  *
- * Base rotation (Servo 2) yaws to face the target in the XY plane.
- * Shoulder (Servo 1) and Elbow (Servo 3) solve 2-link IK in the
- * vertical plane for (horizontal_distance, z).
+ * The arm is flat, so shoulder+elbow solve in the horizontal
+ * plane. Base rotation (Servo 1) rotates the whole arm to
+ * face the target direction in the XY plane.
+ *
+ * Moves Servo 1 (base), Servo 2 (shoulder), and Servo 3 (elbow).
  */
 bool moveToXYZ(float x, float y, float z) {
-  // Base rotation (yaw): Servo 2
+  // Base rotation: angle in the horizontal XY plane
   float baseDeg = radToDeg(atan2(y, x));
 
-  // Horizontal distance for the vertical-plane IK
+  // Horizontal distance for the 2D flat-plane IK
   float r = sqrt(x * x + y * y);
 
-  // Solve 2D IK in the vertical plane (r = forward, z = up)
-  uint8_t result = fabrik.solve(r, z, linkLengths);
+  // Solve 2D IK in the horizontal plane (arm is flat)
+  uint8_t result = fabrik.solve(r, 0, linkLengths);
 
   if (result == 0) {
     Serial.println("IK failed: target unreachable!");
     Serial.print("  Max reach: "); Serial.print(LINK1 + LINK2); Serial.println(" mm");
-    Serial.print("  Target dist: "); Serial.print(sqrt(r * r + z * z)); Serial.println(" mm");
-    if (!forceMove) return false;
-    Serial.println("  [FORCE] Overriding — moving to closest reachable point");
+    Serial.print("  Target dist: "); Serial.print(sqrt(r * r + y * y)); Serial.println(" mm");
+    return false;
   }
 
   float shoulderDeg = radToDeg(fabrik.getAngle(0));
   float elbowDeg    = radToDeg(fabrik.getAngle(1));
 
   // Map to servo positions
-  // Servo 2 = base rotation, Servo 1 = shoulder, Servo 3 = elbow
   int basePos     = angleToServo(baseDeg, BASE_HOME_DEG,
-                                 SERVO_HOME[1], BASE_DIR,
-                                 SERVO_MIN[1], SERVO_MAX[1]);
-  int shoulderPos = angleToServo(shoulderDeg, SHOULDER_HOME_DEG,
-                                 SERVO_HOME[0], SHOULDER_DIR,
+                                 SERVO_HOME[0], BASE_DIR,
                                  SERVO_MIN[0], SERVO_MAX[0]);
+  int shoulderPos = angleToServo(shoulderDeg, SHOULDER_HOME_DEG,
+                                 SERVO_HOME[1], SHOULDER_DIR,
+                                 SERVO_MIN[1], SERVO_MAX[1]);
   int elbowPos    = angleToServo(elbowDeg, ELBOW_HOME_DEG,
                                  SERVO_HOME[2], ELBOW_DIR,
                                  SERVO_MIN[2], SERVO_MAX[2]);
@@ -301,19 +293,18 @@ bool moveToXYZ(float x, float y, float z) {
   Serial.print("Target: ("); Serial.print(x);
   Serial.print(", ");        Serial.print(y);
   Serial.print(", ");        Serial.print(z); Serial.println(") mm");
-  Serial.print("Horiz dist r:   "); Serial.println(r);
   Serial.print("Base angle:     "); Serial.print(baseDeg);     Serial.println(" deg");
   Serial.print("Shoulder angle: "); Serial.print(shoulderDeg); Serial.println(" deg");
   Serial.print("Elbow angle:    "); Serial.print(elbowDeg);    Serial.println(" deg");
-  Serial.print("Base servo(2):     "); Serial.println(basePos);
-  Serial.print("Shoulder servo(1): "); Serial.println(shoulderPos);
-  Serial.print("Elbow servo(3):    "); Serial.println(elbowPos);
+  Serial.print("Base servo:     "); Serial.println(basePos);
+  Serial.print("Shoulder servo: "); Serial.println(shoulderPos);
+  Serial.print("Elbow servo:    "); Serial.println(elbowPos);
   Serial.println("--------------------");
 
   // Move servos
-  moveServo(2, basePos);      // base rotation
-  moveServo(1, shoulderPos);  // shoulder pitch
-  moveServo(3, elbowPos);     // elbow pitch
+  moveServo(1, basePos);
+  moveServo(2, shoulderPos);
+  moveServo(3, elbowPos);
 
   return true;
 }
@@ -337,13 +328,6 @@ void printMenu();
 //  DEMO MODE
 // =====================================================================
 
-// --- Current tracked position for jogging (mm) ---
-float curX = 0;
-float curY = 0;
-float curZ = 0;
-float jogStep = 10.0;  // mm per keypress
-bool  jogMode = false;
-
 bool demoMode = false;
 unsigned long demoTimer = 0;
 bool demoAtTarget = false;
@@ -359,9 +343,6 @@ void demoMoveToTarget() {
   st.WritePosEx(1, DEMO_POS_1, SERVO_SPEED, SERVO_ACC);
   st.WritePosEx(3, DEMO_POS_3, SERVO_SPEED, SERVO_ACC);
   st.WritePosEx(4, DEMO_POS_4, SERVO_SPEED, SERVO_ACC);
-  cmdShoulderDeg = servoToAngle(DEMO_POS_1, SHOULDER_HOME_DEG, SERVO_HOME[0], SHOULDER_DIR);
-  cmdElbowDeg    = servoToAngle(DEMO_POS_3, ELBOW_HOME_DEG,    SERVO_HOME[2], ELBOW_DIR);
-  cmdWristDeg    = servoToAngle(DEMO_POS_4, WRIST_HOME_DEG,    SERVO_HOME[3], WRIST_DIR);
 }
 
 void demoMoveToHome() {
@@ -369,10 +350,6 @@ void demoMoveToHome() {
   for (int i = 0; i < NUM_SERVOS; i++) {
     st.WritePosEx(i + 1, SERVO_HOME[i], SERVO_SPEED, SERVO_ACC);
   }
-  cmdShoulderDeg = SHOULDER_HOME_DEG;
-  cmdBaseDeg = BASE_HOME_DEG;
-  cmdElbowDeg = ELBOW_HOME_DEG;
-  cmdWristDeg = WRIST_HOME_DEG;
 }
 
 void startDemo() {
@@ -417,53 +394,27 @@ void printMenu() {
   Serial.println("  servo id pos     Direct servo control");
   Serial.println("  home             All servos to home");
   Serial.println("  read             Read all servo positions");
-  Serial.println("  jog              Enter jog mode (WASD/QE control)");
-  Serial.println("  step <mm>        Set jog step size (default 10)");
   Serial.println("  demo             Start demo mode");
-  Serial.println("  stop             Stop demo/jog mode");
+  Serial.println("  stop             Stop demo mode");
   Serial.println("============================");
   Serial.print("> ");
 }
 
-// Forward declarations for jog mode
-void printJogStatus();
-
 void processCommand(String input) {
   input.trim();
   if (input.length() == 0) {
-    if (jogMode) printJogStatus();
-    else printMenu();
+    printMenu();
     return;
   }
 
   if (input.equalsIgnoreCase("stop")) {
-    if (demoMode) { stopDemo(); return; }
-    if (jogMode) {
-      jogMode = false;
-      Serial.println("Jog mode stopped.");
-      printMenu();
-      return;
-    }
-    Serial.println("Not in demo/jog mode.");
+    if (demoMode) stopDemo();
+    else Serial.println("Not in demo mode.");
     return;
   }
 
   if (input.equalsIgnoreCase("demo")) {
     startDemo();
-    return;
-  }
-
-  // --- Jog mode: handle text commands (stop, step) ---
-  if (jogMode) {
-    if (input.startsWith("step ") || input.startsWith("STEP ")) {
-      jogStep = input.substring(5).toFloat();
-      if (jogStep <= 0) jogStep = 10.0;
-      Serial.print("Jog step set to "); Serial.print(jogStep); Serial.println(" mm");
-      Serial.print("[jog] > ");
-      return;
-    }
-    Serial.println("Jog: W/S=fwd/back  A/D=left/right  Q/E=up/down  R=force  T=stop");
-    Serial.print("[jog] > ");
     return;
   }
 
@@ -501,36 +452,12 @@ void processCommand(String input) {
     }
 
     if (numCoords == 2) {
-      curX = coords[0]; curY = coords[1]; curZ = 0;
       moveToXY(coords[0], coords[1]);
     } else if (numCoords == 3) {
-      curX = coords[0]; curY = coords[1]; curZ = coords[2];
       moveToXYZ(coords[0], coords[1], coords[2]);
     } else {
       Serial.println("Usage: goto x y  OR  goto x y z");
     }
-  }
-  else if (input.equalsIgnoreCase("jog")) {
-    jogMode = true;
-    // Initialise jog position from current arm state if at origin
-    if (curX == 0 && curY == 0 && curZ == 0) {
-      curX = LINK1 + LINK2;  // start fully extended forward
-    }
-    Serial.println("=== Jog Mode ===");
-    Serial.print("Step size: "); Serial.print(jogStep); Serial.println(" mm");
-    Serial.println("  W/S = forward / backward  (X)");
-    Serial.println("  A/D = left / right         (Y)");
-    Serial.println("  Q/E = up / down             (Z)");
-    Serial.println("  R   = toggle force mode     (override unreachable)");
-    Serial.println("  T   = exit jog mode");
-    Serial.println("  step <mm> = change step size");
-    printJogStatus();
-    Serial.print("[jog] > ");
-  }
-  else if (input.startsWith("step ") || input.startsWith("STEP ")) {
-    jogStep = input.substring(5).toFloat();
-    if (jogStep <= 0) jogStep = 10.0;
-    Serial.print("Jog step set to "); Serial.print(jogStep); Serial.println(" mm");
   }
   else if (input.startsWith("wrist ") || input.startsWith("WRIST ")) {
     float angle = input.substring(6).toFloat();
@@ -555,14 +482,6 @@ void processCommand(String input) {
   Serial.print("> ");
 }
 
-void printJogStatus() {
-  Serial.print("Position: (");
-  Serial.print(curX); Serial.print(", ");
-  Serial.print(curY); Serial.print(", ");
-  Serial.print(curZ); Serial.print(") mm  step=");
-  Serial.print(jogStep); Serial.println(" mm");
-}
-
 // =====================================================================
 //  SETUP & LOOP
 // =====================================================================
@@ -585,69 +504,10 @@ void setup() {
   printMenu();
 }
 
-// Buffer for accumulating non-jog input in jog mode
-String jogCmdBuffer = "";
-
-void handleJogChar(char c) {
-  // Jog keys: process immediately
-  // Toggle force mode with R
-  if (c == 'r' || c == 'R') {
-    forceMove = !forceMove;
-    Serial.print("[FORCE mode "); Serial.print(forceMove ? "ON" : "OFF"); Serial.println("]");
-    Serial.print("[jog] > ");
-    return;
-  }
-  // Instant stop: exit jog mode
-  if (c == 't' || c == 'T') {
-    jogMode = false;
-    Serial.println("Jog mode stopped.");
-    printMenu();
-    return;
-  }
-  if (c == 'w' || c == 'W' || c == 'a' || c == 'A' ||
-      c == 's' || c == 'S' || c == 'd' || c == 'D' ||
-      c == 'q' || c == 'Q' || c == 'e' || c == 'E') {
-    switch (c) {
-      case 'w': case 'W': curX += jogStep; break;
-      case 's': case 'S': curX -= jogStep; break;
-      case 'a': case 'A': curY += jogStep; break;
-      case 'd': case 'D': curY -= jogStep; break;
-      case 'q': case 'Q': curZ += jogStep; break;
-      case 'e': case 'E': curZ -= jogStep; break;
-    }
-    Serial.print("Jog -> (");
-    Serial.print(curX); Serial.print(", ");
-    Serial.print(curY); Serial.print(", ");
-    Serial.print(curZ); Serial.println(")");
-    moveToXYZ(curX, curY, curZ);
-    Serial.print("[jog] > ");
-    return;
-  }
-  // Newline/CR: process accumulated command buffer
-  if (c == '\n' || c == '\r') {
-    jogCmdBuffer.trim();
-    if (jogCmdBuffer.length() > 0) {
-      processCommand(jogCmdBuffer);
-    }
-    jogCmdBuffer = "";
-    return;
-  }
-  // Accumulate other chars (for "stop", "step 20", etc.)
-  jogCmdBuffer += c;
-}
-
 void loop() {
   if (Serial.available()) {
-    if (jogMode) {
-      // In jog mode: read char-by-char for instant response
-      while (Serial.available()) {
-        char c = Serial.read();
-        handleJogChar(c);
-      }
-    } else {
-      String input = Serial.readStringUntil('\n');
-      processCommand(input);
-    }
+    String input = Serial.readStringUntil('\n');
+    processCommand(input);
   }
 
   // Demo mode loop
